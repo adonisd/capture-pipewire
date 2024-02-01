@@ -31,8 +31,8 @@ async fn create_screencast_stream() -> ashpd::Result<ScreencastStream> {
         .response()
         .expect("Failed to get response from screencast");
 
-    let stream = response.streams().first().unwrap().clone();
-    Ok(stream)
+    let screencast_stream = response.streams().first().unwrap().clone();
+    Ok(screencast_stream)
 }
 
 #[tokio::main]
