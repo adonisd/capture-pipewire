@@ -3,7 +3,7 @@ use ashpd::{
     desktop::screencast::{CursorMode, PersistMode, Screencast, SourceType},
     WindowIdentifier,
 };
-mod pipewire_modules; // Import the initialize_pipewire function from the pipewire module
+mod pipewire_modules;
 
 async fn create_screencast_stream() -> ashpd::Result<ScreencastStream> {
     let proxy = Screencast::new()
@@ -41,11 +41,23 @@ async fn main() -> ashpd::Result<()> {
         .await
         .expect("Failed to create screencast stream");
     println!("{:#?}", screen_cast_stream);
+    let id = screen_cast_stream.pipe_wire_node_id();
 
-    let (stream, data, mainloop) = pipewire_modules::initialize_pipewire();
-    pipewire_modules::handle_buffers(&stream, data, false);
+    pipewire::init();
+
+    let mainloop = pipewire::MainLoop::new().expect("Failed to create mainloop");
+    let context = pipewire::Context::new(&mainloop).expect("Failed to create context");
+    let core = context
+        .connect(None)
+        .expect("Failed to connect to PipeWire");
+
+    let stream =
+        pipewire_modules::initialize_pipewire(core).expect("Failed to initialize pipewire");
     println!("Created stream {:#?}", stream);
-    pipewire_modules::connect_stream(&stream, screen_cast_stream.pipe_wire_node_id());
+    let _listener =
+        pipewire_modules::handle_buffers(&stream, false).expect("Failed to handle buffers");
+    println!("Connecting stream");
+    pipewire_modules::connect_stream(&stream, id);
     eprintln!("Connected stream");
     mainloop.run();
     Ok(())

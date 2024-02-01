@@ -3,20 +3,9 @@ use std::io::{stdout, Write};
 pub struct UserData {
     pub(crate) format: pipewire::spa::param::video::VideoInfoRaw,
 }
-
-pub fn initialize_pipewire() -> (pipewire::stream::Stream, UserData, pipewire::MainLoop) {
-    pipewire::init();
-
-    let mainloop = pipewire::MainLoop::new().expect("Failed to create mainloop");
-    let context = pipewire::Context::new(&mainloop).expect("Failed to create context");
-    let core = context
-        .connect(None)
-        .expect("Failed to connect to PipeWire");
-
-    let data = UserData {
-        format: Default::default(),
-    };
-
+pub fn initialize_pipewire(
+    core: pipewire::Core,
+) -> Result<pipewire::stream::Stream, Box<dyn std::error::Error>> {
     let stream = pipewire::stream::Stream::new(
         &core,
         "captured-stream",
@@ -27,11 +16,17 @@ pub fn initialize_pipewire() -> (pipewire::stream::Stream, UserData, pipewire::M
         },
     )
     .expect("Failed to create stream");
-    (stream, data, mainloop)
+    Ok(stream)
 }
 
-pub fn handle_buffers(stream: &pipewire::stream::Stream, data: UserData, check: bool) {
-    let _listener = stream
+pub fn handle_buffers(
+    stream: &pipewire::stream::Stream,
+    check: bool,
+) -> Result<pipewire::stream::StreamListener<UserData>, Box<dyn std::error::Error>> {
+    let data = UserData {
+        format: Default::default(),
+    };
+    let listener = stream
         .add_local_listener_with_user_data(data)
         .state_changed(|old, new| {
             eprintln!("State changed: {:?} -> {:?}", old, new);
@@ -78,6 +73,7 @@ pub fn handle_buffers(stream: &pipewire::stream::Stream, data: UserData, check: 
                 user_data.format.framerate().denom
             );
             if check == true {
+                eprintln!("Exiting...");
                 std::process::exit(0)
             }
         })
@@ -97,6 +93,7 @@ pub fn handle_buffers(stream: &pipewire::stream::Stream, data: UserData, check: 
         })
         .register()
         .expect("Failed to register listener");
+    Ok(listener)
 }
 
 pub fn connect_stream(stream: &pipewire::stream::Stream, id: u32) {
@@ -166,12 +163,12 @@ pub fn connect_stream(stream: &pipewire::stream::Stream, id: u32) {
 
     let mut params = [pipewire::spa::pod::Pod::from_bytes(&values).unwrap()];
 
-    stream
-        .connect(
-            pipewire::spa::Direction::Input,
-            Some(id),
-            pipewire::stream::StreamFlags::AUTOCONNECT | pipewire::stream::StreamFlags::MAP_BUFFERS,
-            &mut params,
-        )
-        .expect("Failed to connect to established stream");
+    eprintln!("connecting to {}", id);
+
+    let _ = stream.connect(
+        pipewire::spa::Direction::Input,
+        Some(id),
+        pipewire::stream::StreamFlags::AUTOCONNECT | pipewire::stream::StreamFlags::MAP_BUFFERS,
+        &mut params,
+    );
 }
