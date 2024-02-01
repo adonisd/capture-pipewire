@@ -10,10 +10,6 @@ Requires the `xdg-desktop-portal` package to be installed.
 
 This module provides access to the `ashpd` library, which is used for creating screencasts.
 
-### pipewire_modules
-
-This module is used for initializing the pipewire, which is a multimedia processing engine.
-
 ## Functions
 
 ### create_screencast_stream
