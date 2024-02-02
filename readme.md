@@ -30,3 +30,7 @@ Then it uses the stream to create a screencast source. After that, it creates a 
 ## Usage
 
 To run the program, use the command `cargo run` in the terminal.
+To capture the buffer output:
+```bash
+cargo run | ffmpeg -f rawvideo -pixel_format bgra -video_size 3440x1440 -framerate 60 -i - -c:v libx264 -preset ultrafast -qp 0 -y output.mp4
+```
